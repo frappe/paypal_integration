@@ -1,0 +1,29 @@
+{%- block header -%}
+<h2>Confirm Payment<h2>
+{% endblock %}
+
+{%- block content -%}
+<p class="lead">Click on confirm to complete your payment.</p>
+<div style="padding: 30px 0px;">
+    {% if data.confirm_values %}
+    <table class="table table-bordered" style="max-width: 400px;">
+        <tbody>
+        {% for label, value in data.confirm_values.iteritems() %}
+            <tr>
+                <td style="width: 50%">
+                    {{ label }}
+                </td>
+                <td style="width: 50%">
+                    {{ value }}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+<p>
+    <a href="/api/method/paypal_integration.express_checkout.confirm_payment?token={{ token }}"
+        class="btn btn-primary btn-lg">Confirm</a>
+</p>
+{% endblock %}

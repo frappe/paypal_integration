@@ -95,10 +95,20 @@ def confirm_payment(token):
 		"PAYMENTREQUEST_0_CURRENCYCODE": paypal_express_payment.currency
 	})
 
-	get_api_response(params)
+	try:
+		get_api_response(params)
 
-	frappe.local.response["type"] = "redirect"
-	frappe.local.response["location"] = get_url("/paypal-express-success")
+		paypal_express_payment = frappe.get_doc("Paypal Express Payment", token)
+		paypal_express_payment.status = "Completed"
+		paypal_express_payment.save(ignore_permissions=True)
+		frappe.db.commit()
+
+		frappe.local.response["type"] = "redirect"
+		frappe.local.response["location"] = get_url("/paypal-express-success")
+	except PaypalException:
+		frappe.local.response["type"] = "redirect"
+		frappe.local.response["location"] = get_url("/paypal-express-cancel")
+
 
 def get_paypal_params():
 	return {

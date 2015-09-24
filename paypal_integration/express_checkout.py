@@ -18,7 +18,7 @@ https://developer.paypal.com/docs/classic/express-checkout/ht_ec-singleItemPayme
 
 class PaypalException(Exception): pass
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist(allow_guest=True, xss_safe=True)
 def set_express_checkout(amount, currency="USD", data=None):
 	if not isinstance(data, basestring):
 		data = json.dumps(data or "{}")
@@ -61,7 +61,7 @@ def execute_set_express_checkout(amount, currency):
 
 	return get_api_response(params.encode("utf-8"))
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist(allow_guest=True, xss_safe=True)
 def get_express_checkout_details(token):
 	params = get_paypal_params()
 	params.update({
@@ -81,7 +81,7 @@ def get_express_checkout_details(token):
 	frappe.local.response["location"] = get_url("/paypal-express-confirm?token=" \
 		+ paypal_express_payment.token)
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist(allow_guest=True, xss_safe=True)
 def confirm_payment(token):
 	paypal_express_payment = frappe.get_doc("Paypal Express Payment", token)
 

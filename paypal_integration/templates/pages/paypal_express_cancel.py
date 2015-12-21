@@ -12,4 +12,9 @@ def get_context(context):
 		paypal_express_payment = frappe.get_doc("Paypal Express Payment", token)
 		paypal_express_payment.status = "Cancelled"
 		paypal_express_payment.save(ignore_permissions=True)
+		
+		if paypal_express_payment.reference_doctype and paypal_express_payment.reference_docname:
+			frappe.get_doc(paypal_express_payment.reference_doctype, 
+				paypal_express_payment.reference_docname).run_method("set_cancelled")
+		
 		frappe.db.commit()

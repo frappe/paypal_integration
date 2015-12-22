@@ -7,6 +7,7 @@ import frappe
 from frappe.utils import get_url
 from urllib import urlencode
 import urlparse, json
+from frappe import _
 
 """
 Paypal Express Checkout using classic API
@@ -20,9 +21,11 @@ class PaypalException(Exception): pass
 
 @frappe.whitelist(allow_guest=True, xss_safe=True)
 def set_express_checkout(amount, currency="USD", data=None):
+	validate_transaction_currency(currency)
+	
 	if not isinstance(data, basestring):
 		data = json.dumps(data or "{}")
-
+	
 	response = execute_set_express_checkout(amount, currency)
 
 	paypal_settings = get_paypal_settings()
@@ -50,12 +53,9 @@ def set_express_checkout(amount, currency="USD", data=None):
 	frappe.db.commit()
 	
 	return return_url.format(token)
-	# frappe.local.response["type"] = "redirect"
-# 	frappe.local.response["location"] = return_url.format(token)
 
 def execute_set_express_checkout(amount, currency):
 	params = get_paypal_params()
-	print params
 	params.update({
 		"METHOD": "SetExpressCheckout",
 		"PAYMENTREQUEST_0_PAYMENTACTION": "SALE",
@@ -87,7 +87,8 @@ def get_express_checkout_details(token):
 	frappe.db.commit()
 	
 	frappe.local.response["type"] = "redirect"
-	frappe.local.response["location"] = get_url("/api/method/paypal_integration.express_checkout.confirm_payment?token="+paypal_express_payment.token)
+	frappe.local.response["location"] = get_url( \
+		"/api/method/paypal_integration.express_checkout.confirm_payment?token="+paypal_express_payment.token)
 	
 @frappe.whitelist(allow_guest=True, xss_safe=True)
 def confirm_payment(token):
@@ -109,9 +110,7 @@ def confirm_payment(token):
 		paypal_express_payment = frappe.get_doc("Paypal Express Payment", token)
 		paypal_express_payment.status = "Completed"
 		paypal_express_payment.save(ignore_permissions=True)
-		
-		print paypal_express_payment.reference_doctype, paypal_express_payment.reference_docname
-		
+				
 		if paypal_express_payment.reference_doctype and paypal_express_payment.reference_docname:
 			frappe.get_doc(paypal_express_payment.reference_doctype, 
 				paypal_express_payment.reference_docname).run_method("set_paid")
@@ -151,3 +150,8 @@ def get_api_response(params):
 
 def get_paypal_settings():
 	return frappe.get_doc("PayPal Settings")
+
+def validate_transaction_currency(currency):
+	if currency not in ["AUD", "CHF", "CZK", "DKK", "HKD", "HUF", "NOK", "NZD", "PHP", "PLN", "RUB", 
+		"SEK", "SGD", "THB", "TWD", "CAD", "EUR", "JPY", "USD"]:
+		frappe.throw(_("Please select another payment method. PayPal not supports transaction currency {}".format(currency)))

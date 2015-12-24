@@ -10,18 +10,7 @@ def get_data():
 				{
 					"type": "doctype",
 					"name": "Paypal Express Payment",
-					"description": _("Paypal Express Payment.")
-				}
-			]
-		},
-		{
-			"label": _("Setup"),
-			"icon": "icon-star",
-			"items": [
-				{
-					"type": "doctype",
-					"name": "PayPal Settings",
-					"description": _("PayPal Settings.")
+					"description": _("Paypal tokens")
 				}
 			]
 		}

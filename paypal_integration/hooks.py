@@ -43,7 +43,7 @@ hide_in_installer = True
 # ------------
 
 # before_install = "paypal_integration.install.before_install"
-# after_install = "paypal_integration.install.after_install"
+after_install = "paypal_integration.after_install.create_payment_gateway"
 
 # Desk Notifications
 # ------------------

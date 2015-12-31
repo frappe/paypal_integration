@@ -10,7 +10,7 @@ def create_payment_gateway():
 		"doctype": "Payment Gateway",
 		"gateway": "PayPal"
 	}).insert(ignore_permissions=True)
-	
+
 	create_gateway_account()
 
 def create_gateway_account():

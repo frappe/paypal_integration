@@ -112,13 +112,19 @@ def confirm_payment(token):
 		paypal_express_payment.save(ignore_permissions=True)
 				
 		if paypal_express_payment.reference_doctype and paypal_express_payment.reference_docname:
-			frappe.get_doc(paypal_express_payment.reference_doctype, 
-				paypal_express_payment.reference_docname).run_method("set_paid")
+			ref_doc = frappe.get_doc(paypal_express_payment.reference_doctype, 
+				paypal_express_payment.reference_docname)
+			ref_doc.run_method("set_paid")
 		
 		frappe.db.commit()
 
 		frappe.local.response["type"] = "redirect"
-		frappe.local.response["location"] = get_url("/paypal-express-success")
+		
+		if ref_doc.make_sales_invoice:
+			frappe.local.response["location"] = get_url("/orders/{}".format(ref_doc.reference_name))
+		
+		else:
+			frappe.local.response["location"] = get_url("/paypal-express-success")
 		
 	except PaypalException:
 		frappe.local.response["type"] = "redirect"

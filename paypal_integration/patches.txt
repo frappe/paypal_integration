@@ -1,1 +1,0 @@
-paypal_integration.patches.v1_0.setup_paypal_settings

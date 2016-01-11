@@ -10,7 +10,7 @@ def get_data():
 				{
 					"type": "doctype",
 					"name": "PayPal Settings",
-					"description": _("Setup PalPal Credentials"),
+					"description": _("Setup PayPal credentials"),
 					"hide_count": True
 				}
 			]

@@ -7,6 +7,7 @@ import frappe
 from frappe.utils import get_url
 from urllib import urlencode
 import urlparse, json
+from frappe import _
 
 """
 Paypal Express Checkout using classic API
@@ -20,12 +21,15 @@ class PaypalException(Exception): pass
 
 @frappe.whitelist(allow_guest=True, xss_safe=True)
 def set_express_checkout(amount, currency="USD", data=None):
+	validate_transaction_currency(currency)
+	
 	if not isinstance(data, basestring):
 		data = json.dumps(data or "{}")
-
+	
 	response = execute_set_express_checkout(amount, currency)
 
-	if frappe.conf.paypal_sandbox:
+	paypal_settings = get_paypal_settings()
+	if paypal_settings.paypal_sandbox:
 		return_url = "https://www.sandbox.paypal.com/cgi-bin/webscr?cmd=_express-checkout&token={0}"
 	else:
 		return_url = "https://www.paypal.com/cgi-bin/webscr?cmd=_express-checkout&token={0}"
@@ -39,11 +43,16 @@ def set_express_checkout(amount, currency="USD", data=None):
 		"token": token,
 		"data": data
 	})
+	if data:
+		data = json.loads(data)
+		if data.get("doctype") and  data.get("docname"):
+			paypal_express_payment.reference_doctype = data.get("doctype")
+			paypal_express_payment.reference_docname = data.get("docname")
+		
 	paypal_express_payment.insert(ignore_permissions = True)
 	frappe.db.commit()
-
-	frappe.local.response["type"] = "redirect"
-	frappe.local.response["location"] = return_url.format(token)
+	
+	return return_url.format(token)
 
 def execute_set_express_checkout(amount, currency):
 	params = get_paypal_params()
@@ -70,17 +79,18 @@ def get_express_checkout_details(token):
 	})
 
 	response = get_api_response(params)
-
+	print "\n\n\n GetExpressCheckoutDetails", response
 	paypal_express_payment = frappe.get_doc("Paypal Express Payment", token)
 	paypal_express_payment.payerid = response.get("PAYERID")[0]
+	paypal_express_payment.payer_email = response.get("EMAIL")[0]
 	paypal_express_payment.status = "Verified"
 	paypal_express_payment.save(ignore_permissions=True)
 	frappe.db.commit()
-
+	
 	frappe.local.response["type"] = "redirect"
-	frappe.local.response["location"] = get_url("/paypal-express-confirm?token=" \
-		+ paypal_express_payment.token)
-
+	frappe.local.response["location"] = get_url( \
+		"/api/method/paypal_integration.express_checkout.confirm_payment?token="+paypal_express_payment.token)
+	
 @frappe.whitelist(allow_guest=True, xss_safe=True)
 def confirm_payment(token):
 	paypal_express_payment = frappe.get_doc("Paypal Express Payment", token)
@@ -101,25 +111,36 @@ def confirm_payment(token):
 		paypal_express_payment = frappe.get_doc("Paypal Express Payment", token)
 		paypal_express_payment.status = "Completed"
 		paypal_express_payment.save(ignore_permissions=True)
+				
+		trigger_ref_doc(paypal_express_payment, "set_as_paid")
+		
 		frappe.db.commit()
-
-		frappe.local.response["type"] = "redirect"
-		frappe.local.response["location"] = get_url("/paypal-express-success")
+		
 	except PaypalException:
 		frappe.local.response["type"] = "redirect"
 		frappe.local.response["location"] = get_url("/paypal-express-cancel")
 
-
 def get_paypal_params():
-	return {
-		"USER": frappe.conf.paypal_username,
-		"PWD": frappe.conf.paypal_password,
-		"SIGNATURE": frappe.conf.paypal_signature,
-		"VERSION": "98"
-	}
+	paypal_settings = get_paypal_settings()
+	if paypal_settings.api_username:
+		return {
+			"USER": paypal_settings.api_username,
+			"PWD": paypal_settings.api_password,
+			"SIGNATURE": paypal_settings.signature,
+			"VERSION": "98"
+		}
+		
+	else :
+		return {
+			"USER": frappe.conf.paypal_username,
+			"PWD": frappe.conf.paypal_password,
+			"SIGNATURE": frappe.conf.paypal_signature,
+			"VERSION": "98"
+		}
 
 def get_api_url():
-	if frappe.conf.paypal_sandbox:
+	paypal_settings = get_paypal_settings()
+	if paypal_settings.paypal_sandbox:
 		return "https://api-3t.sandbox.paypal.com/nvp"
 	else:
 		return "https://api-3t.paypal.com/nvp"
@@ -130,5 +151,29 @@ def get_api_response(params):
 	if response.get("ACK")[0]=="Success":
 		return response
 	else:
-		print response
 		raise PaypalException
+
+def get_paypal_settings():
+	return frappe.get_doc("PayPal Settings")
+
+def validate_transaction_currency(currency):
+	if currency not in ["AUD", "CHF", "CZK", "DKK", "HKD", "HUF", "NOK", "NZD", "PHP", "PLN", "RUB", 
+		"SEK", "SGD", "THB", "TWD", "CAD", "EUR", "JPY", "USD"]:
+		frappe.throw(_("Please select another payment method. PayPal not supports transaction currency {}".format(currency)))
+
+def trigger_ref_doc(paypal_express_payment, method):
+	if paypal_express_payment.reference_doctype and paypal_express_payment.reference_docname:
+		ref_doc = frappe.get_doc(paypal_express_payment.reference_doctype, 
+			paypal_express_payment.reference_docname)
+		ref_doc.run_method(method)
+		
+		if method != "set_as_cancelled":
+			frappe.local.response["type"] = "redirect"
+			if ref_doc.make_sales_invoice:
+				success_url = ref_doc.get_payment_success_url()
+				if success_url:
+					frappe.local.response["location"] = get_url("/{0}".format(success_url))
+				else:
+					frappe.local.response["location"] = get_url("/order/{0}".format(ref_doc.reference_name))
+			else:
+				frappe.local.response["location"] = get_url("/paypal-express-success")

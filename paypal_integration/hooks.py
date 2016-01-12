@@ -10,6 +10,7 @@ app_color = "grey"
 app_email = "info@frappe.io"
 app_version = "0.0.1"
 hide_in_installer = True
+app_license = "MIT"
 
 # Includes in <head>
 # ------------------
@@ -43,7 +44,7 @@ hide_in_installer = True
 # ------------
 
 # before_install = "paypal_integration.install.before_install"
-# after_install = "paypal_integration.install.after_install"
+after_install = "paypal_integration.after_install.create_payment_gateway"
 
 # Desk Notifications
 # ------------------
@@ -67,13 +68,11 @@ hide_in_installer = True
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-#	}
-# }
+doc_events = {
+	"Payment Request": {
+		"get_payment_url": "paypal_integration.utils.get_payment_url"
+	}
+}
 
 # Scheduled Tasks
 # ---------------

@@ -3,7 +3,7 @@
 
 from __future__ import unicode_literals
 import frappe
-from payment_integration.express_checkout import trigger_ref_doc
+from paypal_integration.express_checkout import trigger_ref_doc
 
 def get_context(context):
 	token = frappe.local.form_dict.token

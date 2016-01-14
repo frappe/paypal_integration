@@ -51,8 +51,9 @@ def set_express_checkout(amount, currency="USD", data=None):
 		
 	paypal_express_payment.insert(ignore_permissions = True)
 	frappe.db.commit()
-	
-	return return_url.format(token)
+
+	frappe.local.response["type"] = "redirect"
+	frappe.local.response["location"] = return_url.format(token)
 
 def execute_set_express_checkout(amount, currency):
 	params = get_paypal_params()

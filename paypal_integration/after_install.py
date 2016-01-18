@@ -9,29 +9,28 @@ def create_payment_gateway():
 	payment_gateway = frappe.get_doc({
 		"doctype": "Payment Gateway",
 		"gateway": "PayPal"
-	}).insert(ignore_permissions=True)
+	})
+	payment_gateway.insert(ignore_permissions=True)
 
 	create_gateway_account()
 
 def create_gateway_account():
-	try:
-		company_name = frappe.db.get_value("Global Defaults", None, "default_company")
-		if company_name:
-			company = frappe.get_doc("Company", company_name)
-			
+	company_name = frappe.db.get_value("Global Defaults", None, "default_company")
+	if company_name:
+		company = frappe.get_doc("Company", company_name)
+
+		try:
 			bank_account = create_bank_account({"company_name": company_name, "bank_account": "PayPal"})
-		
-			if not frappe.db.get_value("Payment Gateway Account", {"gateway": "PayPal", 
-				"currency": company.default_currency}, "name"):
-			
-				frappe.get_doc({
-					"doctype": "Payment Gateway Account",
-					"is_default": 1,
-					"gateway": "PayPal",
-					"payment_account": bank_account.name,
-					"currency": company.default_currency
-				}).insert(ignore_permissions=True)
-				
-	except frappe.PermissionError as e:
-		frappe.throw(_("Permission Error"), frappe.PermissionError)
-		
+		except frappe.DuplicateEntryError:
+			pass
+
+		if not frappe.db.get_value("Payment Gateway Account", {"gateway": "PayPal",
+			"currency": company.default_currency}, "name"):
+
+			frappe.get_doc({
+				"doctype": "Payment Gateway Account",
+				"is_default": 1,
+				"gateway": "PayPal",
+				"payment_account": bank_account.name,
+				"currency": company.default_currency
+			}).insert(ignore_permissions=True)

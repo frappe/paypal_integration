@@ -8,7 +8,6 @@ from frappe.model.document import Document
 from paypal_integration.after_install import create_gateway_account
 
 class PayPalSettings(Document):
-	def on_update(self):
-		create_gateway_account()
-		
+	pass
+
 		

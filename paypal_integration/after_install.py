@@ -6,26 +6,33 @@ import frappe
 from erpnext.setup.setup_wizard.setup_wizard import create_bank_account
 
 def create_payment_gateway():
-	payment_gateway = frappe.get_doc({
-		"doctype": "Payment Gateway",
-		"gateway": "PayPal"
-	})
-	payment_gateway.insert(ignore_permissions=True)
+	if frappe.db.exists("DocType", "Payment Gateway"):
+		payment_gateway = frappe.get_doc({
+			"doctype": "Payment Gateway",
+			"gateway": "PayPal"
+		})
+		payment_gateway.insert(ignore_permissions=True)
 
-	create_gateway_account()
+		if frappe.db.exists("DocType", "Payment Gateway Account"):
+			create_gateway_account()
 
 def create_gateway_account():
 	company_name = frappe.db.get_value("Global Defaults", None, "default_company")
 	if company_name:
 		company = frappe.get_doc("Company", company_name)
-
-		try:
+		
+		bank = frappe.db.get_value("Account", {"account_name": "PayPal", "company": company_name}, 
+			["name", "account_type"], as_dict=1)
+		if not bank.name:
 			bank_account = create_bank_account({"company_name": company_name, "bank_account": "PayPal"})
-		except frappe.DuplicateEntryError:
-			pass
+		elif bank.account_type == "Bank":
+			bank_account = bank.name
+		else:
+			bank_account = None
+			
 
-		if not frappe.db.get_value("Payment Gateway Account", {"gateway": "PayPal",
-			"currency": company.default_currency}, "name"):
+		if bank_account and not frappe.db.get_value("Payment Gateway Account", 
+			{"gateway": "PayPal", "currency": company.default_currency}, "name"):
 
 			frappe.get_doc({
 				"doctype": "Payment Gateway Account",

@@ -163,18 +163,21 @@ def validate_transaction_currency(currency):
 		frappe.throw(_("Please select another payment method. PayPal not supports transaction currency {}".format(currency)))
 
 def trigger_ref_doc(paypal_express_payment, method):
+	page_mapper = {"Orders": "orders", "Invoices": "invoices", "My Account": "me"}
 	if paypal_express_payment.reference_doctype and paypal_express_payment.reference_docname:
+		
 		ref_doc = frappe.get_doc(paypal_express_payment.reference_doctype, 
 			paypal_express_payment.reference_docname)
 		ref_doc.run_method(method)
 		
 		if method != "set_as_cancelled":
 			frappe.local.response["type"] = "redirect"
-			if ref_doc.make_sales_invoice:
-				success_url = ref_doc.get_payment_success_url()
+			shopping_cart_settings = frappe.get_doc("Shopping Cart Settings")
+			if ref_doc.make_sales_invoice and shopping_cart_settings.enabled:
+				success_url = shopping_cart_settings.payment_success_url
 				if success_url:
 					frappe.local.response["location"] = get_url("/{0}".format(success_url))
 				else:
-					frappe.local.response["location"] = get_url("/order/{0}".format(ref_doc.reference_name))
+					frappe.local.response["location"] = get_url("/orders/{0}".format(ref_doc.reference_name))
 			else:
 				frappe.local.response["location"] = get_url("/paypal-express-success")

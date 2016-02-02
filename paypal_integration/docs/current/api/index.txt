@@ -1,0 +1,6 @@
+paypal_integration.__init__
+paypal_integration.after_install
+paypal_integration.express_checkout
+paypal_integration.hooks
+paypal_integration.tests
+paypal_integration.utils

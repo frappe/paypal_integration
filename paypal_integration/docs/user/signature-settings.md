@@ -12,11 +12,11 @@ To Integrate Paypal with ERPNext, you need PayPal api signature credentials.
 ---
 
 #### PayPal Account API Signature
- - Login to PayPal Account and got to profile
+ - Login to PayPal Account and go to profile
 <img class="screenshot" alt="Payment Request" src="{{ docs_base_url }}/assets/img/api-step-1.png">
 
  - From **My Selling Tools** go to **api Access**
 <img class="screenshot" alt="Payment Request" src="{{ docs_base_url }}/assets/img/api-step-2.png">
 
- - On API Access Page Choose option 2 to generate API credentials
+ - On API Access Page, choose option 2 to generate API credentials
 <img class="screenshot" alt="Payment Request" src="{{ docs_base_url }}/assets/img/api-step-3.png">

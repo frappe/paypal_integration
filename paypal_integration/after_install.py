@@ -23,7 +23,7 @@ def create_gateway_account():
 		
 		bank = frappe.db.get_value("Account", {"account_name": "PayPal", "company": company_name}, 
 			["name", "account_type"], as_dict=1)
-		if not bank.name:
+		if not bank:
 			bank_account = create_bank_account({"company_name": company_name, "bank_account": "PayPal"})
 		elif bank.account_type == "Bank":
 			bank_account = bank.name

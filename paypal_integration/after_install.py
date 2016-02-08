@@ -38,6 +38,6 @@ def create_gateway_account():
 				"doctype": "Payment Gateway Account",
 				"is_default": 1,
 				"gateway": "PayPal",
-				"payment_account": bank_account.name,
+				"payment_account": bank_account,
 				"currency": company.default_currency
 			}).insert(ignore_permissions=True)

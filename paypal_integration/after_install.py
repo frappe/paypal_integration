@@ -7,20 +7,19 @@ from erpnext.setup.setup_wizard.setup_wizard import create_bank_account
 
 def create_payment_gateway():
 	if frappe.db.exists("DocType", "Payment Gateway"):
-		payment_gateway = frappe.get_doc({
-			"doctype": "Payment Gateway",
-			"gateway": "PayPal"
-		})
-		payment_gateway.insert(ignore_permissions=True)
+		if not frappe.db.exists("Payment Gateway", "PayPal"):
+			payment_gateway = frappe.get_doc({
+				"doctype": "Payment Gateway",
+				"gateway": "PayPal"
+			})
+			payment_gateway.insert(ignore_permissions=True)
 
-		if frappe.db.exists("DocType", "Payment Gateway Account"):
-			create_gateway_account()
+			if frappe.db.exists("DocType", "Payment Gateway Account"):
+				create_gateway_account()
 
 def create_gateway_account():
 	company_name = frappe.db.get_value("Global Defaults", None, "default_company")
-	if company_name:
-		company = frappe.get_doc("Company", company_name)
-		
+	if company_name:		
 		bank = frappe.db.get_value("Account", {"account_name": "PayPal", "company": company_name}, 
 			["name", "account_type"], as_dict=1)
 		if not bank:
@@ -30,14 +29,14 @@ def create_gateway_account():
 		else:
 			bank_account = None
 			
-
+		bank_account_currency = frappe.db.get_value("Account", bank_account, "account_currency")
 		if bank_account and not frappe.db.get_value("Payment Gateway Account", 
-			{"gateway": "PayPal", "currency": company.default_currency}, "name"):
+			{"gateway": "PayPal", "currency": bank_account_currency}, "name"):
 
 			frappe.get_doc({
 				"doctype": "Payment Gateway Account",
 				"is_default": 1,
 				"gateway": "PayPal",
 				"payment_account": bank_account,
-				"currency": company.default_currency
+				"currency": bank_account_currency
 			}).insert(ignore_permissions=True)

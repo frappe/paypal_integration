@@ -31,12 +31,12 @@ def create_gateway_account():
 			
 		bank_account_currency = frappe.db.get_value("Account", bank_account, "account_currency")
 		if bank_account and not frappe.db.get_value("Payment Gateway Account", 
-			{"gateway": "PayPal", "currency": bank_account_currency}, "name"):
-
+			{"payment_gateway": "PayPal", "currency": bank_account_currency}, "name"):
+						
 			frappe.get_doc({
 				"doctype": "Payment Gateway Account",
 				"is_default": 1,
-				"gateway": "PayPal",
-				"payment_account": bank_account,
+				"payment_gateway": "PayPal",
+				"payment_account": bank_account.name,
 				"currency": bank_account_currency
 			}).insert(ignore_permissions=True)

@@ -2,12 +2,12 @@
 # See license.txt
 
 from __future__ import unicode_literals
-import requests
 import frappe
 from frappe.utils import get_url
 from urllib import urlencode
 import urlparse, json
 from frappe import _
+from frappe.utils import get_request_session
 
 """
 Paypal Express Checkout using classic API
@@ -68,7 +68,7 @@ def execute_set_express_checkout(amount, currency):
 
 	params = urlencode(params) + \
 		"&returnUrl={0}&cancelUrl={1}".format(return_url, get_url("/paypal-express-cancel"))
-
+	
 	return get_api_response(params.encode("utf-8"))
 
 @frappe.whitelist(allow_guest=True, xss_safe=True)
@@ -80,7 +80,6 @@ def get_express_checkout_details(token):
 	})
 
 	response = get_api_response(params)
-	print "\n\n\n GetExpressCheckoutDetails", response
 	paypal_express_payment = frappe.get_doc("Paypal Express Payment", token)
 	paypal_express_payment.payerid = response.get("PAYERID")[0]
 	paypal_express_payment.payer_email = response.get("EMAIL")[0]
@@ -147,7 +146,8 @@ def get_api_url():
 		return "https://api-3t.paypal.com/nvp"
 
 def get_api_response(params):
-	response = requests.post(get_api_url(), data=params)
+	s = get_request_session()
+	response = s.post(get_api_url(), data=params)
 	response = urlparse.parse_qs(response.text)
 	if response.get("ACK")[0]=="Success":
 		return response
@@ -176,7 +176,7 @@ def trigger_ref_doc(paypal_express_payment, method):
 			if ref_doc.make_sales_invoice and shopping_cart_settings.enabled:
 				success_url = shopping_cart_settings.payment_success_url
 				if success_url:
-					frappe.local.response["location"] = get_url("/{0}".format(success_url))
+					frappe.local.response["location"] = get_url("/{0}".format(page_mapper[success_url]))
 				else:
 					frappe.local.response["location"] = get_url("/orders/{0}".format(ref_doc.reference_name))
 			else:

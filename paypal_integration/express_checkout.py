@@ -68,7 +68,7 @@ def execute_set_express_checkout(amount, currency):
 
 	params = urlencode(params) + \
 		"&returnUrl={0}&cancelUrl={1}".format(return_url, get_url("/paypal-express-cancel"))
-	
+		
 	return get_api_response(params.encode("utf-8"))
 
 @frappe.whitelist(allow_guest=True, xss_safe=True)

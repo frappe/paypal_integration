@@ -1,0 +1,1 @@
+execute:frappe.get_attr('paypal_integration.after_install.create_gateway_account')()

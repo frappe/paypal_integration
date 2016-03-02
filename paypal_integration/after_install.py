@@ -22,7 +22,7 @@ def create_gateway_account():
 	company_name = frappe.db.get_value("Global Defaults", None, "default_company")
 	if company_name:
 		bank_account = frappe.db.get_value("Account", {"account_name": "PayPal", "company": company_name},
-			["name", "account_type", 'account_currency'], as_dict=1)
+			["name", 'account_currency'], as_dict=1)
 
 		if not bank_account:
 			# try creating one
@@ -30,9 +30,6 @@ def create_gateway_account():
 			if not bank_account:
 				frappe.msgprint(_("Payment Gateway Account not created, please create one manually."))
 				return
-
-		print frappe.db.get_value("Payment Gateway Account",
-			{"payment_gateway": "PayPal", "currency": bank_account.account_currency})
 
 		if bank_account:
 			try:

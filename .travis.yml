@@ -33,4 +33,4 @@ script:
   - bench build-website
   - bench start &
   - sleep 10
-  - bench --verbose run-tests --driver Firefox
+  - bench --verbose run-tests --app paypal_integration --driver Firefox

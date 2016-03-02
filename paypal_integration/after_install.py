@@ -20,27 +20,27 @@ def create_payment_gateway():
 
 def create_gateway_account():
 	company_name = frappe.db.get_value("Global Defaults", None, "default_company")
-	if company_name:		
-		bank = frappe.db.get_value("Account", {"account_name": "PayPal", "company": company_name}, 
+	if company_name:
+		bank_account = frappe.db.get_value("Account", {"account_name": "PayPal", "company": company_name},
 			["name", "account_type"], as_dict=1)
-		if not bank:
-			bank_account = create_bank_account({"company_name": company_name, "bank_account": "PayPal"}).name
+		if not bank_account:
+			bank_account = create_bank_account({"company_name": company_name, "bank_account": "PayPal"})
+			bank_account = bank_account.name
 		elif bank.account_type == "Bank":
 			bank_account = bank.name
 		else:
-			bank_account = None
-				
-		if bank_account:
-			bank_account_currency = frappe.db.get_value("Account", bank_account, "account_currency")
-			if bank_account and not frappe.db.get_value("Payment Gateway Account", 
-				{"payment_gateway": "PayPal", "currency": bank_account_currency}, "name"):
-						
-				frappe.get_doc({
-					"doctype": "Payment Gateway Account",
-					"is_default": 1,
-					"payment_gateway": "PayPal",
-					"payment_account": bank_account,
-					"currency": bank_account_currency
-				}).insert(ignore_permissions=True)
-		else:
-			frappe.throw(_("Bank account not exists. Please create one and try again."))
+			frappe.msgprint(_("Payment Gateway Account not created, please create one manually."))
+			return
+
+
+		bank_account_currency = frappe.db.get_value("Account", bank_account, "account_currency")
+		if bank_account and not frappe.db.get_value("Payment Gateway Account",
+			{"payment_gateway": "PayPal", "currency": bank_account_currency}, "name"):
+
+			frappe.get_doc({
+				"doctype": "Payment Gateway Account",
+				"is_default": 1,
+				"payment_gateway": "PayPal",
+				"payment_account": bank_account.name,
+				"currency": bank_account_currency
+			}).insert(ignore_permissions=True)

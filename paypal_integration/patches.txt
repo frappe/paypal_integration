@@ -1,1 +1,1 @@
-execute:frappe.get_attr('paypal_integration.after_install.create_gateway_account')()
+paypal_integration.patches.redo_install

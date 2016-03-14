@@ -71,6 +71,9 @@ after_install = "paypal_integration.after_install.create_payment_gateway"
 doc_events = {
 	"Payment Request": {
 		"get_payment_url": "paypal_integration.utils.get_payment_url"
+	},
+	"Shopping Cart Settings": {
+		"validate": "paypal_integration.utils.validate_price_list_currency"
 	}
 }
 

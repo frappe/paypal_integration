@@ -158,8 +158,8 @@ def get_paypal_settings():
 	return frappe.get_doc("PayPal Settings")
 
 def validate_transaction_currency(currency):
-	if currency not in ["AUD", "CHF", "CZK", "DKK", "GBP", "HKD", "HUF", "NOK", "NZD", "PHP", "PLN", "RUB", 
-		"SEK", "SGD", "THB", "TWD", "CAD", "EUR", "JPY", "USD"]:
+	if currency not in ["AUD", "BRL", "CAD", "CZK", "DKK", "EUR", "HKD", "HUF", "ILS", "JPY", "MYR", "MXN",
+		"TWD", "NZD", "NOK", "PHP", "PLN", "GBP", "RUB", "SGD", "SEK", "CHF", "THB", "TRY", "USD"]:
 		frappe.throw(_("Please select another payment method. PayPal not supports transaction currency {}".format(currency)))
 
 def trigger_ref_doc(paypal_express_payment, method):

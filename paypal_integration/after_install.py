@@ -31,16 +31,19 @@ def create_gateway_account():
 				frappe.msgprint(_("Payment Gateway Account not created, please create one manually."))
 				return
 
-		if bank_account:
-			try:
-				frappe.get_doc({
-					"doctype": "Payment Gateway Account",
-					"is_default": 1,
-					"payment_gateway": "PayPal",
-					"payment_account": bank_account.name,
-					"currency": bank_account.account_currency
-				}).insert(ignore_permissions=True)
+		if not frappe.db.exists("Payment Gateway Account",
+			{"payment_gateway": "PayPal", "currency": bank_account.account_currency}):
 
-			except frappe.DuplicateEntryError:
-				# already exists, due to a reinstall?
-				pass
+			if bank_account:
+				try:
+					frappe.get_doc({
+						"doctype": "Payment Gateway Account",
+						"is_default": 1,
+						"payment_gateway": "PayPal",
+						"payment_account": bank_account.name,
+						"currency": bank_account.account_currency
+					}).insert(ignore_permissions=True)
+
+				except frappe.DuplicateEntryError:
+					# already exists, due to a reinstall?
+					pass

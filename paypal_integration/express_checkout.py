@@ -158,7 +158,7 @@ def get_paypal_settings():
 	return frappe.get_doc("PayPal Settings")
 
 def validate_transaction_currency(currency):
-	if currency not in ["AUD", "CHF", "CZK", "DKK", "HKD", "HUF", "NOK", "NZD", "PHP", "PLN", "RUB", 
+	if currency not in ["AUD", "CHF", "CZK", "DKK", "GBP", "HKD", "HUF", "NOK", "NZD", "PHP", "PLN", "RUB", 
 		"SEK", "SGD", "THB", "TWD", "CAD", "EUR", "JPY", "USD"]:
 		frappe.throw(_("Please select another payment method. PayPal not supports transaction currency {}".format(currency)))
 

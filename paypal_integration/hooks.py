@@ -44,7 +44,7 @@ app_license = "MIT"
 # ------------
 
 # before_install = "paypal_integration.install.before_install"
-after_install = "paypal_integration.after_install.create_payment_gateway"
+# after_install = "paypal_integration.install.after_install"
 
 # Desk Notifications
 # ------------------
@@ -57,11 +57,11 @@ after_install = "paypal_integration.after_install.create_payment_gateway"
 # Permissions evaluated in scripted ways
 
 # permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
+#	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
 # }
 #
 # has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
+#	"Event": "frappe.desk.doctype.event.event.has_permission",
 # }
 
 # Document Events

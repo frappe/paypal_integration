@@ -78,8 +78,9 @@ def get_express_checkout_details(token):
 		"METHOD": "GetExpressCheckoutDetails",
 		"TOKEN": token
 	})
-
+	
 	response = get_api_response(params)
+
 	paypal_express_payment = frappe.get_doc("Paypal Express Payment", token)
 	paypal_express_payment.payerid = response.get("PAYERID")[0]
 	paypal_express_payment.payer_email = response.get("EMAIL")[0]
@@ -106,7 +107,7 @@ def confirm_payment(token):
 	})
 
 	try:
-		get_api_response(params)
+		response = get_api_response(params)
 
 	except PaypalException, e:
 		frappe.db.rollback()
@@ -123,6 +124,8 @@ def confirm_payment(token):
 	else:
 		paypal_express_payment = frappe.get_doc("Paypal Express Payment", token)
 		paypal_express_payment.status = "Completed"
+		paypal_express_payment.transaction_id = response.get("PAYMENTINFO_0_TRANSACTIONID")[0]
+		paypal_express_payment.correlation_id = response.get("CORRELATIONID")[0]
 		paypal_express_payment.save(ignore_permissions=True)
 		trigger_ref_doc(paypal_express_payment, "set_as_paid")
 		frappe.db.commit()

@@ -6,7 +6,7 @@ from __future__ import unicode_literals
 import frappe
 import unittest
 
-# test_records = frappe.get_test_records('Paypal Log')
+# test_records = frappe.get_test_records('PayPal Log')
 
-class TestPaypalLog(unittest.TestCase):
+class TestPayPalLog(unittest.TestCase):
 	pass

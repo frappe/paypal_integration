@@ -17,8 +17,6 @@ For full workflow:
 https://developer.paypal.com/docs/classic/express-checkout/ht_ec-singleItemPayment-curl-etc/
 """
 
-class PaypalException(Exception): pass
-
 @frappe.whitelist(allow_guest=True, xss_safe=True)
 def set_express_checkout(amount, currency="USD", data=None):
 	validate_transaction_currency(currency)
@@ -27,6 +25,17 @@ def set_express_checkout(amount, currency="USD", data=None):
 		data = json.dumps(data or "{}")
 
 	response = execute_set_express_checkout(amount, currency)
+
+	if not response["success"]:
+		paypal_log(response)
+		frappe.db.commit()
+
+		frappe.respond_as_web_page(_("Something went wrong"),
+			_("Looks like something is wrong with this site's Paypal configuration. Don't worry! No payment has been made from your Paypal account."),
+			success=False,
+			http_status_code=frappe.ValidationError.http_status_code)
+
+		return
 
 	paypal_settings = get_paypal_settings()
 	if paypal_settings.paypal_sandbox:
@@ -41,11 +50,14 @@ def set_express_checkout(amount, currency="USD", data=None):
 		"amount": amount,
 		"currency": currency,
 		"token": token,
-		"data": data
+		"data": data,
+		"correlation_id": response.get("CORRELATIONID")[0]
 	})
 	if data:
-		data = json.loads(data)
-		if data.get("doctype") and  data.get("docname"):
+		if isinstance(data, basestring):
+			data = json.loads(data)
+
+		if data.get("doctype") and data.get("docname"):
 			paypal_express_payment.reference_doctype = data.get("doctype")
 			paypal_express_payment.reference_docname = data.get("docname")
 
@@ -78,8 +90,19 @@ def get_express_checkout_details(token):
 		"METHOD": "GetExpressCheckoutDetails",
 		"TOKEN": token
 	})
-	
+
 	response = get_api_response(params)
+
+	if not response["success"]:
+		paypal_log(response, params)
+		frappe.db.commit()
+
+		frappe.respond_as_web_page(_("Something went wrong"),
+			_("Looks like something went wrong during the transaction. Since we haven't confirmed the payment, Paypal will automatically refund you this amount. If it doesn't, please send us an email and mention the Correlation ID: {0}.").format(response.get("CORRELATIONID", [None])[0]),
+			success=False,
+			http_status_code=frappe.ValidationError.http_status_code)
+
+		return
 
 	paypal_express_payment = frappe.get_doc("Paypal Express Payment", token)
 	paypal_express_payment.payerid = response.get("PAYERID")[0]
@@ -106,32 +129,31 @@ def confirm_payment(token):
 		"PAYMENTREQUEST_0_CURRENCYCODE": paypal_express_payment.currency
 	})
 
-	try:
-		response = get_api_response(params)
+	response = get_api_response(params)
 
-	except PaypalException, e:
-		frappe.db.rollback()
-		frappe.get_doc({
-			"doctype": "Paypal Log",
-			"error": "{e}\n\n{traceback}".format(e=e, traceback=frappe.get_traceback()),
-			"params": frappe.as_json(params)
-		}).insert(ignore_permissions=True)
-		frappe.db.commit()
-
-		frappe.local.response["type"] = "redirect"
-		frappe.local.response["location"] = get_url("/paypal-express-failed")
-
-	else:
-		paypal_express_payment = frappe.get_doc("Paypal Express Payment", token)
+	if response["success"]:
 		paypal_express_payment.status = "Completed"
 		paypal_express_payment.transaction_id = response.get("PAYMENTINFO_0_TRANSACTIONID")[0]
 		paypal_express_payment.correlation_id = response.get("CORRELATIONID")[0]
+		paypal_express_payment.flags.redirect = True
+		paypal_express_payment.flags.redirect_to = get_url("/paypal-express-success")
+		paypal_express_payment.flags.status_changed_to = "Completed"
 		paypal_express_payment.save(ignore_permissions=True)
-		trigger_ref_doc(paypal_express_payment, "set_as_paid")
-		frappe.db.commit()
 
+	else:
+		paypal_express_payment.status = "Failed"
+		paypal_express_payment.flags.redirect = True
+		paypal_express_payment.flags.redirect_to = get_url("/paypal-express-failed")
+		paypal_express_payment.save(ignore_permissions=True)
+
+		paypal_log(response, params)
+
+	frappe.db.commit()
+
+	# this is done so that functions called via hooks can update flags.redirect_to
+	if paypal_express_payment.flags.redirect:
 		frappe.local.response["type"] = "redirect"
-		frappe.local.response["location"] = get_url("/paypal-express-success")
+		frappe.local.response["location"] = paypal_express_payment.flags.redirect_to
 
 def get_paypal_params():
 	paypal_settings = get_paypal_settings()
@@ -162,10 +184,8 @@ def get_api_response(params):
 	s = get_request_session()
 	response = s.post(get_api_url(), data=params)
 	response = urlparse.parse_qs(response.text)
-	if response.get("ACK")[0]=="Success":
-		return response
-	else:
-		raise PaypalException(response)
+	response["success"] = response.get("ACK")[0]=="Success"
+	return response
 
 def get_paypal_settings():
 	paypal_settings = frappe.get_doc("PayPal Settings")
@@ -180,24 +200,11 @@ def get_paypal_settings():
 def validate_transaction_currency(currency):
 	if currency not in ["AUD", "BRL", "CAD", "CZK", "DKK", "EUR", "HKD", "HUF", "ILS", "JPY", "MYR", "MXN",
 		"TWD", "NZD", "NOK", "PHP", "PLN", "GBP", "RUB", "SGD", "SEK", "CHF", "THB", "TRY", "USD"]:
-		frappe.throw(_("Please select another payment method. PayPal not supports transaction currency {}".format(currency)))
+		frappe.throw(_("Please select another payment method. PayPal does not support transactions in currency '{0}'").format(currency))
 
-def trigger_ref_doc(paypal_express_payment, method):
-	page_mapper = {"Orders": "orders", "Invoices": "invoices", "My Account": "me"}
-	if paypal_express_payment.reference_doctype and paypal_express_payment.reference_docname:
-
-		ref_doc = frappe.get_doc(paypal_express_payment.reference_doctype,
-			paypal_express_payment.reference_docname)
-		ref_doc.run_method(method)
-
-		if method != "set_as_cancelled":
-			frappe.local.response["type"] = "redirect"
-			shopping_cart_settings = frappe.get_doc("Shopping Cart Settings")
-			if ref_doc.make_sales_invoice and shopping_cart_settings.enabled:
-				success_url = shopping_cart_settings.payment_success_url
-				if success_url:
-					frappe.local.response["location"] = get_url("/{0}".format(page_mapper[success_url]))
-				else:
-					frappe.local.response["location"] = get_url("/orders/{0}".format(ref_doc.reference_name))
-			else:
-				frappe.local.response["location"] = get_url("/paypal-express-success")
+def paypal_log(response, params=None):
+	frappe.get_doc({
+		"doctype": "Paypal Log",
+		"error": frappe.as_json(response),
+		"params": frappe.as_json(params or "")
+	}).insert(ignore_permissions=True)

@@ -208,3 +208,44 @@ def paypal_log(response, params=None):
 		"error": frappe.as_json(response),
 		"params": frappe.as_json(params or "")
 	}).insert(ignore_permissions=True)
+
+def set_redirect(paypal_express_payment):
+	"""ERPNext related redirects.
+	   You need to set Paypal Express Payment.flags.redirect_to on status change.
+	   Called via PaypalExpressPayment.on_update"""
+
+	if "erpnext" not in frappe.get_installed_apps():
+		return
+
+	if not paypal_express_payment.flags.status_changed_to:
+		return
+
+	reference_doctype = paypal_express_payment.reference_doctype
+	reference_docname = paypal_express_payment.reference_docname
+
+	if not (reference_doctype and reference_docname):
+		return
+
+	reference_doc = frappe.get_doc(reference_doctype,  reference_docname)
+	shopping_cart_settings = frappe.get_doc("Shopping Cart Settings")
+
+	if paypal_express_payment.flags.status_changed_to == "Completed":
+		reference_doc.run_method("set_as_paid")
+
+		# if shopping cart enabled and in session
+		if (shopping_cart_settings.enabled
+			and hasattr(frappe.local, "session")
+			and frappe.local.session.user != "Guest"):
+
+			success_url = shopping_cart_settings.payment_success_url
+			if success_url:
+				paypal_express_payment.flags.redirect_to = ({
+					"Orders": "orders",
+					"Invoices": "invoices",
+					"My Account": "me"
+				}).get(success_url, "me")
+			else:
+				paypal_express_payment.flags.redirect_to = get_url("/orders/{0}".format(reference_doc.reference_name))
+
+	elif paypal_express_payment.flags.status_changed_to == "Cancelled":
+		reference_doc.run_method("set_as_cancelled")

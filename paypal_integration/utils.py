@@ -13,14 +13,17 @@ def get_payment_url(doc, method):
 
 def validate_price_list_currency(doc, method):
 	if doc.enable_checkout:
-		payment_gateway_account = frappe.get_doc("Payment Gateway Account", doc.payment_gateway_account)
+		if doc.payment_gateway_account:
+			payment_gateway_account = frappe.get_doc("Payment Gateway Account", doc.payment_gateway_account)
 	
-		if payment_gateway_account.payment_gateway == _("PayPal"):
-		
-			price_list_currency = frappe.db.get_value("Price List", doc.price_list, "currency")
+			if payment_gateway_account.payment_gateway == _("PayPal"):
+				if doc.price_list:
+					price_list_currency = frappe.db.get_value("Price List", doc.price_list, "currency")
+					if not price_list_currency:
+						frappe.throw(_("Price List {0} does not exists").format(doc.price_list))
 			
-			validate_transaction_currency(price_list_currency)
+					validate_transaction_currency(price_list_currency)
 			
-			if price_list_currency != payment_gateway_account.currency:
-				frappe.throw(_("Price List currency and Payment Gateway Account currency is not matching"))
+					if price_list_currency != payment_gateway_account.currency:
+						frappe.throw(_("Price List currency and Payment Gateway Account currency is not matching"))
 	

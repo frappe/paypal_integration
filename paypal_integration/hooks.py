@@ -70,6 +70,7 @@ app_license = "MIT"
 
 doc_events = {
 	"Payment Request": {
+		"validate": "paypal_integration.express_checkout.validate_paypal_credentails",
 		"get_payment_url": "paypal_integration.utils.get_payment_url"
 	},
 	"Shopping Cart Settings": {

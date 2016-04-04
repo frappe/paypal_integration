@@ -12,11 +12,15 @@ def get_payment_url(doc, method):
 			http_status_code=frappe.ValidationError.http_status_code)
 
 def validate_price_list_currency(doc, method):
-	if doc.enable_checkout:
+	'''Called from Shopping Cart Settings hook'''
+	if doc.enabled and doc.enable_checkout:
+		if not doc.payment_gateway_account:
+			doc.enable_checkout = 0
+			return
+
 		payment_gateway_account = frappe.get_doc("Payment Gateway Account", doc.payment_gateway_account)
 
 		if payment_gateway_account.payment_gateway=="PayPal":
-
 			price_list_currency = frappe.db.get_value("Price List", doc.price_list, "currency")
 
 			validate_transaction_currency(price_list_currency)

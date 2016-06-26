@@ -22,7 +22,7 @@ def set_express_checkout(amount, currency="USD", data=None):
 	validate_transaction_currency(currency)
 
 	if not isinstance(data, basestring):
-		data = json.dumps(data or "{}")
+		data = frappe.as_json(data or "{}")
 
 	response = execute_set_express_checkout(amount, currency)
 

@@ -7,15 +7,15 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from erpnext.setup.setup_wizard.setup_wizard import create_bank_account
-from paypal_integration.express_checkout import validate_paypal_credentails
+from paypal_integration.express_checkout import validate_paypal_credentials
 
 class PayPalSettings(Document):
 	def validate(self):
-		if self.get("__islocal") != False:
-			self.validate_paypal_credentails()
+		if self.get("__islocal"):
+			self.validate_paypal_credentials()
 		
-	def validate_paypal_credentails(self):
-		validate_paypal_credentails(self, "validate_paypal_credentails")
+	def validate_paypal_credentials(self):
+		validate_paypal_credentials(self, "validate_paypal_credentials")
 		
 	def on_update(self):
 		create_payment_gateway_and_account()

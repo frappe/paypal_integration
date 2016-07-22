@@ -19,7 +19,7 @@ https://developer.paypal.com/docs/classic/express-checkout/ht_ec-singleItemPayme
 
 class PaypalException(Exception): pass
 
-def validate_paypal_credentails(doc, method):
+def validate_paypal_credentials(doc, method):
 	if hasattr(doc, "api_username"):
 		params = {
 			"USER": doc.api_username,

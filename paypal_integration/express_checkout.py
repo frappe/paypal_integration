@@ -17,6 +17,38 @@ For full workflow:
 https://developer.paypal.com/docs/classic/express-checkout/ht_ec-singleItemPayment-curl-etc/
 """
 
+class PaypalException(Exception): pass
+
+def validate_paypal_credentials(doc, method):
+	if hasattr(doc, "api_username"):
+		params = {
+			"USER": doc.api_username,
+			"PWD": doc.api_password,
+			"SIGNATURE": doc.signature,
+			"VERSION": "98",
+			"paypal_sandbox": doc.paypal_sandbox
+		}
+	else:
+		params = get_paypal_params()
+
+	if params.get("USER"):
+		api_url =  None
+		
+		if params.has_key("paypal_sandbox"):
+			api_url = get_api_url(frappe._dict(params))
+			del params["paypal_sandbox"]
+		
+		params.update({
+			"METHOD": "GetPalDetails"
+		})
+
+		params = urlencode(params)
+		
+		try:
+			return get_api_response(params.encode("utf-8"), api_url)
+		except Exception, e:
+			frappe.throw(_("Invalid payment gateway credentials"))
+
 @frappe.whitelist(allow_guest=True, xss_safe=True)
 def set_express_checkout(amount, currency="USD", data=None):
 	validate_transaction_currency(currency)
@@ -173,16 +205,18 @@ def get_paypal_params():
 			"VERSION": "98"
 		}
 
-def get_api_url():
-	paypal_settings = get_paypal_settings()
+def get_api_url(paypal_settings=None):
+	if not paypal_settings:
+		paypal_settings = get_paypal_settings()
+	
 	if paypal_settings.paypal_sandbox:
 		return "https://api-3t.sandbox.paypal.com/nvp"
 	else:
 		return "https://api-3t.paypal.com/nvp"
 
-def get_api_response(params):
+def get_api_response(params, api_url=None):
 	s = get_request_session()
-	response = s.post(get_api_url(), data=params)
+	response = s.post(api_url or get_api_url(), data=params)
 	response = urlparse.parse_qs(response.text)
 	response["success"] = response.get("ACK")[0]=="Success"
 	return response

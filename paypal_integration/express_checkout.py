@@ -248,19 +248,23 @@ def set_redirect(paypal_express_payment):
 	   You need to set Paypal Express Payment.flags.redirect_to on status change.
 	   Called via PaypalExpressPayment.on_update"""
 
+	reference_doctype = paypal_express_payment.reference_doctype
+	reference_docname = paypal_express_payment.reference_docname
+
+	if reference_doctype and reference_docname:
+		reference_doc = frappe.get_doc(reference_doctype, reference_docname)
+		reference_doc.run_method('on_payment_authorized')
+
 	if "erpnext" not in frappe.get_installed_apps():
 		return
 
 	if not paypal_express_payment.flags.status_changed_to:
 		return
 
-	reference_doctype = paypal_express_payment.reference_doctype
-	reference_docname = paypal_express_payment.reference_docname
 
-	if not (reference_doctype and reference_docname):
+	if not reference_doc:
 		return
 
-	reference_doc = frappe.get_doc(reference_doctype,  reference_docname)
 	shopping_cart_settings = frappe.get_doc("Shopping Cart Settings")
 
 	if paypal_express_payment.flags.status_changed_to == "Completed":

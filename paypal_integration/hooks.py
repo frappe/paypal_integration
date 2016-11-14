@@ -9,7 +9,7 @@ app_icon = "octicon octicon-credit-card"
 app_color = "#179bd7"
 app_email = "info@frappe.io"
 app_version = "0.0.1"
-#hide_in_installer = True
+hide_in_installer = True
 app_license = "MIT"
 
 # Includes in <head>

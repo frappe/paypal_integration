@@ -46,7 +46,7 @@ def validate_paypal_credentials(doc, method):
 		
 		try:
 			return get_api_response(params.encode("utf-8"), api_url)
-		except Exception, e:
+		except Exception as e:
 			frappe.throw(_("Invalid payment gateway credentials"))
 
 @frappe.whitelist(allow_guest=True, xss_safe=True)

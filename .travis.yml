@@ -28,13 +28,7 @@ matrix:
     env: DB=postgres TYPE=server
     script: bench --site test_site run-tests --coverage
 
-  - name: "Cypress"
-    python: 3.6
-    env: DB=mariadb TYPE=ui
-    before_script: bench --site test_site execute frappe.utils.install.complete_setup_wizard
-    script: bench --site test_site run-ui-tests frappe --headless
-
-  - name: "Python 2.7 MariaDB"
+    - name: "Python 2.7 MariaDB"
     python: 2.7
     env: DB=mariadb TYPE=server
     script: bench --site test_site run-tests --coverage
@@ -78,4 +72,4 @@ install:
   - bench get-app erpnext https://github.com/frappe/erpnext.git
   - bench get-app paypal_integration $TRAVIS_BUILD_DIR
   - bench --site test_site install-app erpnext paypal_integration
-  - bench --verbose run-tests --app paypal_integration
+  - bench --site test_site --verbose run-tests --app paypal_integration

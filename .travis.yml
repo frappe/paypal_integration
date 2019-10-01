@@ -1,33 +1,81 @@
 language: python
+dist: trusty
+sudo: required
 
-python:
-  - "2.7"
+addons:
+  hosts:
+    - test_site
+  mariadb: 10.3
+  postgresql: 9.5
 
-services:
-  - mysql
+git:
+  depth: 1
+
+cache:
+  - pip
+  - npm
+  - yarn
+
+matrix:
+  include:
+  - name: "Python 3.6 MariaDB"
+    python: 3.6
+    env: DB=mariadb TYPE=server
+    script: bench --site test_site run-tests --coverage
+
+  - name: "Python 3.6 PostgreSQL"
+    python: 3.6
+    env: DB=postgres TYPE=server
+    script: bench --site test_site run-tests --coverage
+
+  - name: "Cypress"
+    python: 3.6
+    env: DB=mariadb TYPE=ui
+    before_script: bench --site test_site execute frappe.utils.install.complete_setup_wizard
+    script: bench --site test_site run-ui-tests frappe --headless
+
+  - name: "Python 2.7 MariaDB"
+    python: 2.7
+    env: DB=mariadb TYPE=server
+    script: bench --site test_site run-tests --coverage
 
 install:
-  - sudo apt-get purge -y mysql-common
-  - wget https://raw.githubusercontent.com/frappe/bench/master/install_scripts/setup_frappe.sh
-  - sudo bash setup_frappe.sh --skip-setup-bench --mysql-root-password travis
-  - sudo pip install --upgrade pip
-  #- rm $TRAVIS_BUILD_DIR/.git/shallow
-  - cd ~/ && bench init frappe-bench --frappe-path https://github.com/frappe/frappe.git --frappe-branch develop
-  - cp -r $TRAVIS_BUILD_DIR/test_sites/test_site ~/frappe-bench/sites/
+  - cd ~
+  - source ./.nvm/nvm.sh
+  - nvm install v8.10.0
 
-before_script:
-  - mysql -e 'create database test_frappe'
-  - echo "USE mysql;\nCREATE USER 'test_frappe'@'localhost' IDENTIFIED BY 'test_frappe';\nFLUSH PRIVILEGES;\n" | mysql -u root -ptravis
-  - echo "USE mysql;\nGRANT ALL PRIVILEGES ON \`test_frappe\`.* TO 'test_frappe'@'localhost';\n" | mysql -u root -ptravis
+  - git clone https://github.com/frappe/bench --depth 1
+  - pip install -e ./bench
 
-script:
-  - cd ~/frappe-bench
+  - bench init frappe-bench --skip-assets
+
+  - mkdir ~/frappe-bench/sites/test_site
+  - cp $TRAVIS_BUILD_DIR/.travis/$DB.json ~/frappe-bench/sites/test_site/site_config.json
+
+  - mysql -u root -e "SET GLOBAL character_set_server = 'utf8mb4'"
+  - mysql -u root -e "SET GLOBAL collation_server = 'utf8mb4_unicode_ci'"
+
+  - mysql -u root -e "CREATE DATABASE test_frappe"
+  - mysql -u root -e "CREATE USER 'test_frappe'@'localhost' IDENTIFIED BY 'test_frappe'"
+  - mysql -u root -e "GRANT ALL PRIVILEGES ON \`test_frappe\`.* TO 'test_frappe'@'localhost'"
+
+  - mysql -u root -e "UPDATE mysql.user SET Password=PASSWORD('travis') WHERE User='root'"
+  - mysql -u root -e "FLUSH PRIVILEGES"
+
+  - psql -c "CREATE DATABASE test_frappe" -U postgres
+  - psql -c "CREATE USER test_frappe WITH PASSWORD 'test_frappe'" -U postgres
+
+  - cd ./frappe-bench
+
+  - sed -i 's/watch:/# watch:/g' Procfile
+  - sed -i 's/schedule:/# schedule:/g' Procfile
+
+  - if [ $TYPE == "server" ]; then sed -i 's/socketio:/# socketio:/g' Procfile; fi
+  - if [ $TYPE == "server" ]; then sed -i 's/redis_socketio:/# redis_socketio:/g' Procfile; fi
+
+  - bench start &
+  - bench --site test_site reinstall --yes
   - bench get-app erpnext https://github.com/frappe/erpnext.git
   - bench get-app paypal_integration $TRAVIS_BUILD_DIR
-  - bench use test_site
-  - bench reinstall
-  - bench build
-  - bench build-website
-  - bench start &
-  - sleep 10
-  - bench --verbose run-tests --app paypal_integration --driver Firefox
+  - bench --site test_site install-app erpnext paypal_integration
+  - bench --verbose run-tests --app paypal_integration

@@ -6,4 +6,4 @@ import frappe
 class TestExpressCheckout(TestCase):
 	def test_set_express_checkout(self):
 		express_checkout.set_express_checkout(100, "USD")
-		self.assertEquals(frappe.local.response["type"], "redirect")
+		self.assertEqual(frappe.local.response["type"], "redirect")

@@ -2,10 +2,18 @@
 # See license.txt
 
 from __future__ import unicode_literals
+
+import json
+
+try:
+	from urlparse import parse_qs
+except ImportError:
+	from urllib.parse import parse_qs
+
+from six import string_types
+
 import frappe
 from frappe.utils import get_url
-from urllib import urlencode
-import urlparse, json
 from frappe import _
 from frappe.utils import get_request_session
 
@@ -20,6 +28,7 @@ https://developer.paypal.com/docs/classic/express-checkout/ht_ec-singleItemPayme
 class PaypalException(Exception): pass
 
 def validate_paypal_credentials(doc, method):
+	from six.moves.urllib.parse import urlencode
 	if hasattr(doc, "api_username"):
 		params = {
 			"USER": doc.api_username,
@@ -33,27 +42,27 @@ def validate_paypal_credentials(doc, method):
 
 	if params.get("USER"):
 		api_url =  None
-		
-		if params.has_key("paypal_sandbox"):
+
+		if "paypal_sandbox" in params:
 			api_url = get_api_url(frappe._dict(params))
 			del params["paypal_sandbox"]
-		
+
 		params.update({
 			"METHOD": "GetPalDetails"
 		})
 
 		params = urlencode(params)
-		
+
 		try:
 			return get_api_response(params.encode("utf-8"), api_url)
-		except Exception as e:
+		except Exception:
 			frappe.throw(_("Invalid payment gateway credentials"))
 
 @frappe.whitelist(allow_guest=True, xss_safe=True)
 def set_express_checkout(amount, currency="USD", data=None):
 	validate_transaction_currency(currency)
 
-	if not isinstance(data, basestring):
+	if not isinstance(data, string_types):
 		data = frappe.as_json(data or "{}")
 
 	response = execute_set_express_checkout(amount, currency)
@@ -86,7 +95,7 @@ def set_express_checkout(amount, currency="USD", data=None):
 		"correlation_id": response.get("CORRELATIONID")[0]
 	})
 	if data:
-		if isinstance(data, basestring):
+		if isinstance(data, string_types):
 			data = json.loads(data)
 
 		if data.get("doctype") and data.get("docname"):
@@ -100,6 +109,7 @@ def set_express_checkout(amount, currency="USD", data=None):
 	frappe.local.response["location"] = return_url.format(token)
 
 def execute_set_express_checkout(amount, currency):
+	from six.moves.urllib.parse import urlencode
 	params = get_paypal_params()
 	params.update({
 		"METHOD": "SetExpressCheckout",
@@ -208,7 +218,7 @@ def get_paypal_params():
 def get_api_url(paypal_settings=None):
 	if not paypal_settings:
 		paypal_settings = get_paypal_settings()
-	
+
 	if paypal_settings.paypal_sandbox:
 		return "https://api-3t.sandbox.paypal.com/nvp"
 	else:
@@ -217,7 +227,7 @@ def get_api_url(paypal_settings=None):
 def get_api_response(params, api_url=None):
 	s = get_request_session()
 	response = s.post(api_url or get_api_url(), data=params)
-	response = urlparse.parse_qs(response.text)
+	response = parse_qs(response.text)
 	response["success"] = response.get("ACK")[0]=="Success"
 	return response
 

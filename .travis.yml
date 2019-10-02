@@ -69,7 +69,6 @@ install:
 
   - bench start &
   - bench --site test_site reinstall --yes
-  - bench get-app erpnext https://github.com/frappe/erpnext.git
-  - bench get-app paypal_integration $TRAVIS_BUILD_DIR
+  - bench get-app erpnext paypal_integration
   - bench --site test_site install-app erpnext paypal_integration
   - bench --site test_site --verbose run-tests --app paypal_integration
